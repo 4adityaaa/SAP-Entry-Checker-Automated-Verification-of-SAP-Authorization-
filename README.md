@@ -1,0 +1,2 @@
+# SAP-Entry-Checker-Automated-Verification-of-SAP-Authorization-
+Reviewers of SAP security settings routinely receive screenshots of the transaction SUIM as proof that a set of authorization objects and values was searched for, and they compare these screenshots with a control workbook row by row. The task is repetitive, and small slips such as a misread transaction code or an overlooked value are easy to make.
