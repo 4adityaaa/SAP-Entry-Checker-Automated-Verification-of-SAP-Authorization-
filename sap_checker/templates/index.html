@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAP Entry Checker</title>
+<style>
+  :root{--bg:#f4f6fb;--card:#fff;--ink:#1c2333;--muted:#6b7385;--line:#e3e7f0;--brand:#1f4fd8;
+        --pass:#157f3b;--passbg:#e3f6e9;--fail:#b3261e;--failbg:#fde8e7}
+  *{box-sizing:border-box} body{margin:0;font-family:Segoe UI,system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:linear-gradient(115deg,#14214d,#1c3974);color:#fff;padding:20px 28px;box-shadow:0 4px 16px #17294a22}
+  header h1{margin:0;font-size:21px;letter-spacing:.2px}
+  header p{margin:4px 0 0;color:#b8c4ee;font-size:13px}
+  main{max-width:1320px;margin:24px auto;padding:0 20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:0 5px 18px #2538580a}
+  h2{margin:0 0 14px;font-size:16px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px} @media(max-width:850px){.grid{grid-template-columns:1fr}}
+  .drop{border:2px dashed #b9c3e0;border-radius:12px;padding:25px;text-align:center;cursor:pointer;background:#fafbff;transition:background .18s,border-color .18s,transform .18s}
+  .drop:hover{border-color:var(--brand);transform:translateY(-1px)}
+  .drop.over{background:#eef2ff;border-color:var(--brand)} .drop b{color:var(--brand)}
+  .muted{color:var(--muted);font-size:13px}
+  .list{max-height:170px;overflow:auto;margin-top:10px;font-size:13px}
+  .item{display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid var(--line)}
+  .item button{border:0;background:none;color:var(--fail);cursor:pointer;font-size:15px}
+  .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  select,input[type=text]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px}
+  .btn{background:var(--brand);color:#fff;border:0;border-radius:8px;padding:11px 22px;font-size:15px;cursor:pointer;font-weight:600}
+  .btn:disabled{background:#a9b6e6;cursor:not-allowed} .btn.alt{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+  .err{background:var(--failbg);color:var(--fail);padding:10px 14px;border-radius:8px;margin-top:12px;display:none;font-size:14px}
+  .bar{height:12px;background:#e6eaf6;border-radius:8px;overflow:hidden;margin:10px 0 6px}
+  .bar>div{height:100%;width:0;background:var(--brand);transition:width .3s}
+  .stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:12px}
+  @media(max-width:1000px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:620px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .stat{border-radius:12px;padding:14px 16px;background:#f1f4fb;min-width:0}
+  .stat span{display:block;font-size:12px;line-height:1.4}
+  .stat b{display:block;font-size:27px;line-height:1.2;margin-top:6px}
+  .stat.p{background:var(--passbg);color:var(--pass)} .stat.f{background:var(--failbg);color:var(--fail)}
+  .stat.a{background:#eaf1ff;color:#2449a6}
+  .stat.c{background:#edf4f7;color:#28566a}
+  .metric-note{margin:0 0 16px;padding:10px 12px;border-radius:8px;background:#f8f9fc;color:var(--muted);font-size:12px;line-height:1.5}
+  .table-wrap{width:100%;overflow:auto;border:1px solid var(--line);border-radius:10px}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:740px} th{text-align:left;background:#f1f4fb;padding:11px 10px;position:sticky;top:0}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr.main{cursor:pointer} tr.main:hover{background:#f8faff}
+  .badge{padding:3px 12px;border-radius:20px;font-weight:700;font-size:12px}
+  .badge.PASS{background:var(--passbg);color:var(--pass)} .badge.FAIL{background:var(--failbg);color:var(--fail)}
+  .detail{background:#fafbff;font-size:13px} .detail td{padding:12px 18px}
+  .obj{margin-bottom:8px} .ok{color:var(--pass);font-weight:600} .bad{color:var(--fail);font-weight:600}
+  .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{padding:8px 16px;border-radius:20px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px}
+  .tab.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:16px}
+  .shot{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .shot img{width:100%;display:block;cursor:zoom-in} .shot .in{padding:10px 14px;font-size:13px}
+  .warn{color:#9a6700;font-size:12px} code{background:#eef1f8;padding:1px 6px;border-radius:5px}
+  .hide{display:none}
+  #modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:9}
+  #modal img{max-width:95vw;max-height:95vh}
+  button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,.tab:focus-visible{outline:3px solid #8ba7ff;outline-offset:2px}
+</style>
+</head>
+<body>
+<header><h1>SAP Entry Checker</h1>
+<p>Check SUIM authorization screenshots against your Excel requirements. Results include match coverage, OCR confidence, and screenshot evidence.</p></header>
+<main>
+
+<section class="card">
+  <h2>1. Upload</h2>
+  <div class="grid">
+    <div>
+      <div class="drop" id="imgDrop"><b>Click or drop SAP screenshots here</b><br>
+        <span class="muted">Max {{ max_files }} images &middot; {{ max_mb }} MB each &middot; JPG / PNG / BMP / WEBP / TIFF</span></div>
+      <input type="file" id="imgInput" accept="image/*" multiple class="hide">
+      <div class="muted" id="imgInfo" style="margin-top:8px">No screenshots selected</div>
+      <div class="list" id="imgList"></div>
+    </div>
+    <div>
+      <div class="drop" id="xlDrop"><b>Click or drop the Excel file here</b><br>
+        <span class="muted">.xlsx with columns: Auth Object N / Auth Object N Fields</span></div>
+      <input type="file" id="xlInput" accept=".xlsx,.xlsm" class="hide">
+      <div class="muted" id="xlInfo" style="margin-top:8px">No Excel selected</div>
+      <div class="row" style="margin-top:16px">
+        <label class="muted" for="mode">Match mode:</label>
+        <select id="mode">
+          <option value="strict">Strict - every value in the Excel must be on the screen</option>
+          <option value="lenient">Lenient - Excel OR/AND logic (one of the OR values is enough)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:18px">
+    <button class="btn" id="runBtn" disabled>Check entries</button>
+    <span class="muted">Screenshots are processed in file-name order (name them 01, 02, 03 ...).</span>
+  </div>
+  <div class="err" id="err"></div>
+</section>
+
+<section class="card hide" id="progCard">
+  <h2>Processing</h2>
+  <div class="bar"><div id="barFill"></div></div>
+  <div class="muted" id="progMsg">Starting...</div>
+</section>
+
+<section class="card hide" id="resCard">
+  <h2>2. Result</h2>
+  <div class="stats">
+    <div class="stat"><span>Excel entries</span><b id="sTotal">0</b></div>
+    <div class="stat p"><span>PASS (entry done)</span><b id="sPass">0</b></div>
+    <div class="stat f"><span>FAIL (not done / wrong)</span><b id="sFail">0</b></div>
+    <div class="stat"><span>Pass rate</span><b id="sRate">0%</b></div>
+    <div class="stat a"><span>Criteria accuracy*</span><b id="sAccuracy">—</b></div>
+    <div class="stat c"><span>OCR confidence**</span><b id="sConfidence">—</b></div>
+  </div>
+  <p class="metric-note">* Criteria accuracy is the share of workbook object/field checks satisfied by the extracted screenshot data in this run; it is not a guarantee of OCR correctness. ** OCR confidence is the recognition engine's confidence for relevant detected text, not a measured accuracy percentage. Validate against manually labelled screenshots before relying on a target such as 98%.</p>
+  <div class="tabs">
+    <div class="tab on" data-view="table">Test cases</div>
+    <div class="tab" data-view="shots">Screenshots &amp; extracted data</div>
+    <a class="btn alt" id="dlBtn" style="margin-left:auto;text-decoration:none">Download Excel report</a>
+  </div>
+
+  <div id="viewTable">
+    <div class="row" style="margin-bottom:10px">
+      <div class="tabs" style="margin:0" id="filters">
+        <div class="tab on" data-f="ALL">All</div><div class="tab" data-f="PASS">Pass</div><div class="tab" data-f="FAIL">Fail</div>
+      </div>
+      <input type="text" id="search" placeholder="Search function / object..." style="min-width:260px">
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Excel row</th><th>RAFIT</th><th>Function</th><th>Status</th><th>Evidence screenshot(s)</th></tr></thead>
+    <tbody id="tbody"></tbody></table></div>
+  </div>
+
+  <div id="viewShots" class="hide"><div class="shots" id="shots"></div></div>
+</section>
+</main>
+<div id="modal"><img id="modalImg" alt=""></div>
+
+<script>
+const MAX_FILES = {{ max_files }}, MAX_MB = {{ max_mb }};
+let images = [], excel = null, jobId = null, data = null, filter = "ALL";
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = b => b > 1048576 ? (b/1048576).toFixed(1) + " MB" : Math.round(b/1024) + " KB";
+
+function showErr(m){ const e=$("err"); e.textContent=m; e.style.display=m?"block":"none"; }
+
+function renderImages(){
+  const total = images.reduce((a,f)=>a+f.size,0);
+  $("imgInfo").textContent = images.length ? `${images.length} / ${MAX_FILES} screenshots - ${fmt(total)}` : "No screenshots selected";
+  $("imgList").innerHTML = images.map((f,i)=>`<div class="item"><span>${esc(f.name)} <span class="muted">(${fmt(f.size)})</span></span><button data-i="${i}" title="Remove">&times;</button></div>`).join("");
+  $("imgList").querySelectorAll("button").forEach(b=>b.onclick=()=>{images.splice(+b.dataset.i,1);renderImages();});
+  $("runBtn").disabled = !(images.length && excel);
+}
+function addImages(list){
+  showErr("");
+  for(const f of list){
+    if(!/\.(jpe?g|png|bmp|webp|tiff?)$/i.test(f.name)){ showErr(`"${f.name}" is not a supported image type.`); continue; }
+    if(f.size > MAX_MB*1048576){ showErr(`"${f.name}" is larger than ${MAX_MB} MB and was skipped.`); continue; }
+    if(images.length >= MAX_FILES){ showErr(`Maximum ${MAX_FILES} screenshots allowed. Extra files were skipped.`); break; }
+    if(images.some(x=>x.name===f.name && x.size===f.size)) continue;
+    images.push(f);
+  }
+  renderImages();
+}
+function setExcel(f){
+  showErr("");
+  if(!f) return;
+  if(!/\.xlsx?m?$/i.test(f.name) || /\.xls$/i.test(f.name)){ showErr("Please choose an .xlsx file."); return; }
+  excel = f; $("xlInfo").textContent = `${f.name} (${fmt(f.size)})`; renderImages();
+}
+function wireDrop(zone, input, onFiles){
+  zone.onclick = () => input.click();
+  input.onchange = () => { onFiles([...input.files]); input.value = ""; };
+  zone.ondragover = e => { e.preventDefault(); zone.classList.add("over"); };
+  zone.ondragleave = () => zone.classList.remove("over");
+  zone.ondrop = e => { e.preventDefault(); zone.classList.remove("over"); onFiles([...e.dataTransfer.files]); };
+}
+wireDrop($("imgDrop"), $("imgInput"), addImages);
+wireDrop($("xlDrop"), $("xlInput"), l => setExcel(l[0]));
+
+$("runBtn").onclick = async () => {
+  showErr(""); $("runBtn").disabled = true; $("resCard").classList.add("hide");
+  $("progCard").classList.remove("hide"); setProg(0, 1, "Uploading files...");
+  const fd = new FormData();
+  images.forEach(f => fd.append("screenshots", f, f.name));
+  fd.append("excel", excel, excel.name); fd.append("mode", $("mode").value);
+  try{
+    const r = await fetch("/api/start", {method:"POST", body: fd});
+    const j = await r.json();
+    if(!r.ok){ throw new Error(j.error || "Upload failed"); }
+    jobId = j.job_id; poll();
+  }catch(e){ showErr(e.message); $("progCard").classList.add("hide"); $("runBtn").disabled = false; }
+};
+function setProg(d, t, m){ $("barFill").style.width = Math.round(100*d/Math.max(t,1)) + "%"; $("progMsg").textContent = `${m}  (${d}/${t})`; }
+async function poll(){
+  try{
+    const r = await fetch("/api/status/" + jobId); const s = await r.json();
+    if(!r.ok) throw new Error(s.error || "Status error");
+    if(s.state === "error") throw new Error(s.error);
+    setProg(s.done, s.total, s.message);
+    if(s.state === "done"){ await loadResult(); return; }
+    setTimeout(poll, 800);
+  }catch(e){ showErr(e.message); $("progCard").classList.add("hide"); $("runBtn").disabled = false; }
+}
+async function loadResult(){
+  const r = await fetch("/api/result/" + jobId); data = await r.json();
+  $("progCard").classList.add("hide"); $("runBtn").disabled = false; $("resCard").classList.remove("hide");
+  const s = data.summary;
+  $("sTotal").textContent = s.total; $("sPass").textContent = s.passed; $("sFail").textContent = s.failed;
+  $("sRate").textContent = s.total ? Math.round(100*s.passed/s.total) + "%" : "0%";
+  $("sAccuracy").textContent = s.criteria_match_percent == null ? "—" : `${s.criteria_match_percent}%`;
+  $("sConfidence").textContent = s.ocr_confidence_percent == null ? "—" : `${s.ocr_confidence_percent}%`;
+  $("dlBtn").href = "/download/" + jobId;
+  renderTable(); renderShots();
+  $("resCard").scrollIntoView({behavior:"smooth"});
+}
+
+function objDetail(o){
+  const head = `<b>${esc(o.obj)}</b> <span class="${o.ok?"ok":"bad"}">${o.ok?"OK":"FAIL"}</span>` +
+    ((o.screenshots && o.screenshots.length) || o.screenshot ?
+      ` <span class="muted">in ${esc((o.screenshots && o.screenshots.length ? o.screenshots : [o.screenshot]).join(", "))}</span>` : "");
+  if(!o.fields.length) return `<div class="obj">${head}${o.note?`<div class="bad">${esc(o.note)}</div>`:""}</div>`;
+  const f = o.fields.map(x => `<div>&nbsp;&nbsp;${esc(x.name)} = <code>${esc(x.expected)}</code> &rarr; ` +
+    (x.ok ? `<span class="ok">found ${esc(x.found.join(", "))}</span>` :
+      `<span class="bad">missing ${esc(x.missing.join(", "))}</span>` + (x.found.length?` <span class="muted">(found ${esc(x.found.join(", "))})</span>`:"")) + `</div>`).join("");
+  return `<div class="obj">${head}${f}${o.note&&!o.fields.length?esc(o.note):""}</div>`;
+}
+function renderTable(){
+  const q = $("search").value.trim().toLowerCase();
+  const rows = data.results.filter(r => (filter==="ALL" || r.status===filter) &&
+    (!q || (r.function + " " + r.rafit + " " + r.objects.map(o=>o.obj).join(" ")).toLowerCase().includes(q)));
+  $("tbody").innerHTML = rows.map(r => `
+    <tr class="main" data-r="${r.excel_row}"><td>${r.excel_row}</td><td>${esc(r.rafit)}</td><td>${esc(r.function)}</td>
+      <td><span class="badge ${r.status}">${r.status}</span></td><td class="muted">${esc(r.evidence.join(", ") || "-")}</td></tr>
+    <tr class="detail hide" id="d${r.excel_row}"><td colspan="5">${r.objects.map(objDetail).join("")}</td></tr>`).join("")
+    || `<tr><td colspan="5" class="muted">No rows</td></tr>`;
+  document.querySelectorAll("tr.main").forEach(tr => tr.onclick = () => $("d"+tr.dataset.r).classList.toggle("hide"));
+}
+document.querySelectorAll("#filters .tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll("#filters .tab").forEach(x => x.classList.remove("on")); t.classList.add("on");
+  filter = t.dataset.f; renderTable();
+});
+$("search").oninput = renderTable;
+
+function renderShots(){
+  $("shots").innerHTML = data.screens.map(s => {
+    const blocks = s.blocks.filter(b => b.object).map(b => `<div><b>${esc(b.object)}</b>: ` +
+      Object.entries(b.fields).filter(([k,v]) => v.length && k !== "DOCUMENT1").map(([k,v]) => `${esc(k)} = <code>${esc(v.join(" OR "))}</code>`).join(" &nbsp; ") + `</div>`).join("");
+    const warn = [...s.warnings, ...s.notes, ...(s.error ? ["ERROR: " + s.error] : [])].map(w => `<div class="warn">&#9888; ${esc(w)}</div>`).join("");
+    return `<div class="shot">${s.image ? `<img src="/files/${jobId}/${esc(s.image)}" alt="" data-full="/files/${jobId}/${esc(s.image)}">` : ""}
+      <div class="in"><b>${esc(s.filename)}</b> <span class="muted">${s.seconds}s${s.skew?` &middot; deskewed ${s.skew}&deg;`:""}${s.ocr_confidence == null ? "" : ` &middot; OCR confidence ${s.ocr_confidence}%`}</span>
+      ${blocks || '<div class="muted">No authorization objects recognised</div>'}${warn}</div></div>`;
+  }).join("");
+  document.querySelectorAll(".shot img").forEach(i => i.onclick = () => { $("modalImg").src = i.dataset.full; $("modal").style.display = "flex"; });
+}
+$("modal").onclick = () => $("modal").style.display = "none";
+document.querySelectorAll(".tabs > .tab[data-view]").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tabs > .tab[data-view]").forEach(x => x.classList.remove("on")); t.classList.add("on");
+  $("viewTable").classList.toggle("hide", t.dataset.view !== "table"); $("viewShots").classList.toggle("hide", t.dataset.view !== "shots");
+});
+</script>
+</body>
+</html>
